@@ -83,9 +83,11 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["var(--font-sans)"],
+        sans: ["Inter", "var(--font-sans)", "system-ui", "sans-serif"],
         serif: ["var(--font-serif)"],
-        mono: ["var(--font-mono)"],
+        mono: ["JetBrains Mono", "var(--font-mono)", "monospace"],
+        display: ["Space Grotesk", "var(--font-sans)", "system-ui", "sans-serif"],
+        body: ["Inter", "var(--font-sans)", "system-ui", "sans-serif"],
       },
       keyframes: {
         "accordion-down": {

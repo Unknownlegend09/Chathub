@@ -9,6 +9,7 @@ import AuthPage from "@/pages/auth-page";
 import ChatPage from "@/pages/chat-page";
 import GroupsPage from "@/pages/groups-page";
 import ProfilePage from "@/pages/profile-page";
+import AdminPage from "@/pages/admin-page";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ component: Component, ...rest }: any) {
@@ -49,6 +50,12 @@ function Router() {
       <Route path="/profile">
         <LayoutShell>
           <ProtectedRoute component={ProfilePage} />
+        </LayoutShell>
+      </Route>
+
+      <Route path="/admin">
+        <LayoutShell>
+          <ProtectedRoute component={AdminPage} />
         </LayoutShell>
       </Route>
 

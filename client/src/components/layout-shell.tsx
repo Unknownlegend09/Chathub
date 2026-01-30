@@ -9,7 +9,8 @@ import {
   ShieldCheck, 
   Users, 
   Settings, 
-  Menu 
+  Menu,
+  Shield
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -31,18 +32,24 @@ export function LayoutShell({ children }: { children: ReactNode }) {
       </div>
 
       <nav className="flex-1 p-4 space-y-2">
-        <Link href="/" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${location === '/' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}`}>
+        <Link href="/" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${location === '/' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}`} data-testid="link-chat">
           <MessageSquare className="w-5 h-5" />
           Chat
         </Link>
-        <Link href="/groups" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${location === '/groups' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}`}>
+        <Link href="/groups" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${location === '/groups' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}`} data-testid="link-groups">
           <Users className="w-5 h-5" />
           Groups
         </Link>
-        <Link href="/profile" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${location === '/profile' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}`}>
+        <Link href="/profile" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${location === '/profile' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}`} data-testid="link-profile">
           <Settings className="w-5 h-5" />
           Security
         </Link>
+        {user.isAdmin && (
+          <Link href="/admin" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${location === '/admin' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}`} data-testid="link-admin">
+            <Shield className="w-5 h-5" />
+            Admin
+          </Link>
+        )}
       </nav>
 
       <div className="p-4 border-t border-border/50">
@@ -54,8 +61,13 @@ export function LayoutShell({ children }: { children: ReactNode }) {
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <span className="text-sm font-medium leading-none">{user.username}</span>
-              <span className="text-xs text-primary mt-1">Online</span>
+              <span className="text-sm font-medium leading-none flex items-center gap-1.5">
+                {user.username}
+                {user.isAdmin && (
+                  <span className="text-[10px] bg-primary/20 text-primary px-1 py-0.5 rounded">Admin</span>
+                )}
+              </span>
+              <span className="text-xs text-green-500 mt-1">Online</span>
             </div>
           </div>
         </div>
@@ -63,6 +75,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
           variant="ghost" 
           className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
           onClick={() => logout.mutate()}
+          data-testid="button-logout"
         >
           <LogOut className="w-4 h-4 mr-2" />
           Logout
@@ -73,12 +86,10 @@ export function LayoutShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      {/* Desktop Sidebar */}
       <aside className="hidden md:block w-64 h-full shrink-0 z-20">
         <NavContent />
       </aside>
 
-      {/* Mobile Nav */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card/80 backdrop-blur-lg border-b border-border z-50 flex items-center px-4 justify-between">
         <div className="flex items-center gap-2 text-primary font-display font-bold text-lg">
           <ShieldCheck className="w-5 h-5" />
@@ -86,7 +97,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
         </div>
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
               <Menu className="w-5 h-5" />
             </Button>
           </SheetTrigger>
@@ -96,7 +107,6 @@ export function LayoutShell({ children }: { children: ReactNode }) {
         </Sheet>
       </div>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative md:static pt-16 md:pt-0">
         {children}
       </main>

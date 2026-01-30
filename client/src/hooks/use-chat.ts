@@ -62,7 +62,7 @@ export function useMessages(userId?: number, groupId?: number) {
       if (!res.ok) throw new Error("Failed to fetch messages");
       return api.messages.list.responses[200].parse(await res.json());
     },
-    refetchInterval: 3000, // Poll every 3s for new messages
+    refetchInterval: 5000,
   });
 }
 
@@ -80,9 +80,89 @@ export function useSendMessage() {
       if (!res.ok) throw new Error("Failed to send message");
       return api.messages.create.responses[201].parse(await res.json());
     },
-    onSuccess: (data) => {
-      // Invalidate messages query to show new message immediately
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.messages.list.path] });
+    },
+  });
+}
+
+export function useMarkMessagesRead() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (senderId: number) => {
+      const res = await fetch(api.messages.markAllRead.path, {
+        method: api.messages.markAllRead.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ senderId }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to mark messages as read");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.messages.list.path] });
+    },
+  });
+}
+
+export function useAdminUsersActivity() {
+  return useQuery({
+    queryKey: [api.admin.getAllUsersActivity.path],
+    queryFn: async () => {
+      const res = await fetch(api.admin.getAllUsersActivity.path, { credentials: "include" });
+      if (res.status === 403) return null;
+      if (!res.ok) throw new Error("Failed to fetch activity");
+      return res.json();
+    },
+    retry: false,
+  });
+}
+
+export function useDeleteUser() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete user");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.admin.getAllUsersActivity.path] });
+      toast({ title: "User Deleted", description: "The user has been removed." });
+    },
+    onError: (error) => {
+      toast({ title: "Delete Failed", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+export function usePromoteToAdmin() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await fetch(`/api/admin/users/${userId}/promote`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to promote user");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.users.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.admin.getAllUsersActivity.path] });
+      toast({ title: "User Promoted", description: "User is now an admin." });
+    },
+    onError: (error) => {
+      toast({ title: "Promotion Failed", description: error.message, variant: "destructive" });
     },
   });
 }

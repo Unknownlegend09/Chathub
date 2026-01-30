@@ -1,18 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUsers } from "@/hooks/use-chat";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { ChatView } from "@/components/chat-view";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Search, Bell, BellOff } from "lucide-react";
 
 export default function ChatPage() {
   const { user } = useAuth();
   const { data: users = [], isLoading } = useUsers();
+  const { onlineUsers, typingUsers } = useWebSocket();
   const [selectedUserId, setSelectedUserId] = useState<number | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  useEffect(() => {
+    if ("Notification" in window) {
+      setNotificationsEnabled(Notification.permission === "granted");
+    }
+  }, []);
+
+  const requestNotificationPermission = async () => {
+    if ("Notification" in window) {
+      const permission = await Notification.requestPermission();
+      setNotificationsEnabled(permission === "granted");
+    }
+  };
 
   const filteredUsers = users.filter(u => 
     u.id !== user?.id && 
@@ -20,18 +35,32 @@ export default function ChatPage() {
   );
 
   const selectedUser = users.find(u => u.id === selectedUserId);
+  const selectedUserOnline = selectedUserId ? (onlineUsers.get(selectedUserId) ?? selectedUser?.isOnline ?? false) : false;
+  const selectedUserTyping = selectedUserId ? typingUsers.get(selectedUserId) : false;
 
   if (isLoading) return (
-    <div className="flex items-center justify-center h-full">
+    <div className="flex items-center justify-center h-full" data-testid="loading-spinner">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
     </div>
   );
 
   return (
     <div className="flex h-full">
-      {/* Sidebar List - Hidden on mobile when chat is active */}
       <div className={`w-full md:w-80 border-r border-border/50 bg-card/30 flex flex-col ${selectedUserId ? 'hidden md:flex' : 'flex'}`}>
-        <div className="p-4 border-b border-border/50">
+        <div className="p-4 border-b border-border/50 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-lg">Chats</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={requestNotificationPermission}
+              className={notificationsEnabled ? "text-primary" : "text-muted-foreground"}
+              data-testid="button-notifications"
+              title={notificationsEnabled ? "Notifications enabled" : "Enable notifications"}
+            >
+              {notificationsEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+            </Button>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
@@ -39,6 +68,7 @@ export default function ChatPage() {
               className="pl-9 bg-background/50 border-border/50 focus:border-primary"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              data-testid="input-search-users"
             />
           </div>
         </div>
@@ -49,51 +79,71 @@ export default function ChatPage() {
               No users found
             </div>
           ) : (
-            filteredUsers.map(u => (
-              <button
-                key={u.id}
-                onClick={() => setSelectedUserId(u.id)}
-                className={`w-full p-3 flex items-center gap-3 rounded-xl transition-all ${
-                  selectedUserId === u.id 
-                    ? "bg-primary/10 border border-primary/20" 
-                    : "hover:bg-muted/50 border border-transparent"
-                }`}
-              >
-                <div className="relative">
-                  <Avatar className="h-10 w-10 border border-border">
-                    <AvatarFallback className="bg-muted font-medium text-foreground">
-                      {u.username.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {u.isOnline && (
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-primary border-2 border-background rounded-full"></span>
-                  )}
-                </div>
-                <div className="flex-1 text-left">
-                  <div className="font-medium text-sm text-foreground">{u.username}</div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    Tap to start encrypted chat
+            filteredUsers.map(u => {
+              const userOnline = onlineUsers.get(u.id) ?? u.isOnline ?? false;
+              const userTyping = typingUsers.get(u.id) ?? false;
+              
+              return (
+                <button
+                  key={u.id}
+                  onClick={() => setSelectedUserId(u.id)}
+                  className={`w-full p-3 flex items-center gap-3 rounded-xl transition-all ${
+                    selectedUserId === u.id 
+                      ? "bg-primary/10 border border-primary/20" 
+                      : "hover:bg-muted/50 border border-transparent"
+                  }`}
+                  data-testid={`user-item-${u.id}`}
+                >
+                  <div className="relative">
+                    <Avatar className="h-10 w-10 border border-border">
+                      <AvatarFallback className="bg-muted font-medium text-foreground">
+                        {u.username.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {userOnline && (
+                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></span>
+                    )}
                   </div>
-                </div>
-              </button>
-            ))
+                  <div className="flex-1 text-left">
+                    <div className="font-medium text-sm text-foreground flex items-center gap-2">
+                      {u.username}
+                      {u.isAdmin && (
+                        <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded">Admin</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {userTyping ? (
+                        <span className="text-primary">typing...</span>
+                      ) : userOnline ? (
+                        <span className="text-green-500">Online</span>
+                      ) : u.lastSeen ? (
+                        `Last seen ${formatLastSeen(u.lastSeen)}`
+                      ) : (
+                        "Tap to start encrypted chat"
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })
           )}
         </div>
       </div>
 
-      {/* Main Chat Area */}
       <div className={`flex-1 ${!selectedUserId ? 'hidden md:block' : 'block'}`}>
         {selectedUserId ? (
           <div className="h-full relative">
-            {/* Back button for mobile */}
             <div className="md:hidden absolute top-4 left-4 z-50">
-              <Button variant="ghost" size="sm" onClick={() => setSelectedUserId(undefined)}>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedUserId(undefined)} data-testid="button-back">
                 ← Back
               </Button>
             </div>
             <ChatView 
               recipientId={selectedUserId} 
               title={selectedUser?.username || "Chat"} 
+              isOnline={selectedUserOnline}
+              isTyping={selectedUserTyping}
+              lastSeen={selectedUser?.lastSeen ? String(selectedUser.lastSeen) : null}
             />
           </div>
         ) : (
@@ -110,4 +160,23 @@ export default function ChatPage() {
       </div>
     </div>
   );
+}
+
+function formatLastSeen(lastSeen: string | Date): string {
+  try {
+    const date = new Date(lastSeen);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
+  } catch {
+    return "recently";
+  }
 }
