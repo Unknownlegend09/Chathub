@@ -128,7 +128,9 @@ export async function registerRoutes(
       return res.json(msgs);
     }
 
-    res.json([]);
+    // Return all messages for the current user to build sidebar metadata
+    const allMessages = await storage.getMessages(user.id, undefined as any); // Modified storage to handle single user
+    res.json(allMessages);
   });
 
   app.post(api.messages.create.path, async (req, res) => {
