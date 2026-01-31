@@ -268,12 +268,15 @@ export async function registerRoutes(
 
   if (process.env.NODE_ENV !== "production") {
     const allUsers = await storage.getAllUsers();
-    if (allUsers.length === 0) {
+    if (allUsers.length === 0 || !allUsers.find(u => u.username === "admin")) {
       console.log("Seeding database...");
       const bcrypt = await import("bcryptjs");
       const hashed = await bcrypt.hash("password123", 10);
       const hashedAns = await bcrypt.hash("blue", 10);
       
+      // Clear existing to avoid partial seeds
+      // await db.delete(users); 
+
       await storage.createUser({
         username: "admin",
         password: await bcrypt.hash("admin123", 10),

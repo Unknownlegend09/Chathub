@@ -165,9 +165,9 @@ function RegisterForm() {
         )}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="security-q">Security Question (for recovery)</Label>
+        <Label htmlFor="reg-security-q">Security Question (for recovery)</Label>
         <Input 
-          id="security-q" 
+          id="reg-security-q" 
           placeholder="e.g. First pet's name?" 
           className="bg-muted/50"
           {...form.register("securityQuestion")}
@@ -177,9 +177,9 @@ function RegisterForm() {
         )}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="security-a">Security Answer</Label>
+        <Label htmlFor="reg-security-a">Security Answer</Label>
         <Input 
-          id="security-a" 
+          id="reg-security-a" 
           type="password"
           placeholder="Your answer" 
           className="bg-muted/50"

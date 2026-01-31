@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
-import bcrypt from "bcryptjs"; // Need to install this
+import bcrypt from "bcryptjs";
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
